@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQUASENSE - Water Sensor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+    <style>
+        :root{color-scheme:dark;--bg:#07111d;--panel:#101e2c;--panel2:#132536;--line:#22384a;--text:#edf6f5;--muted:#8fa5b3;--cyan:#56d8d0;--lime:#c5ed9b;--red:#ff7e79;--amber:#ffc66e}
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 80% -12%,#16424a 0,transparent 34%),linear-gradient(145deg,#07111d,#0b1925 60%,#09131f);color:var(--text);min-height:100vh;line-height:1.55}
+        .header{max-width:1180px;margin:0 auto;padding:38px 28px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+        .header h1{font-size:1.65rem;letter-spacing:.12em;font-weight:750;color:var(--text);margin-bottom:2px}.header h1:before{content:"";display:inline-block;width:11px;height:11px;background:var(--cyan);border-radius:4px;margin:0 12px 2px 0;box-shadow:0 0 20px #56d8d088;transform:rotate(45deg)}
+        .header p{font-size:.88rem;color:var(--muted);padding-left:24px}.container{max-width:1180px;margin:0 auto;padding:8px 28px 56px}
+        .section{background:linear-gradient(145deg,rgba(18,34,49,.96),rgba(13,27,40,.96));border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:18px;box-shadow:0 14px 40px #00000018}
+        .section-title{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:#a9c0c8;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:10px}.section-title:before{content:"";height:16px;width:3px;border-radius:9px;background:var(--cyan)}
+        .connection-form{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.connection-form input{background:#091722;border:1px solid #2b4657;border-radius:10px;color:var(--text);padding:11px 14px;font-size:.9rem;flex:1;min-width:220px}.connection-form input:focus{outline:2px solid #56d8d055;border-color:var(--cyan)}
+        .btn{background:var(--cyan);color:#06202a;padding:10px 17px;border:0;border-radius:10px;cursor:pointer;font-weight:750;font-size:.83rem;letter-spacing:.02em;transition:transform .16s,filter .16s}.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}.connection-form .btn:last-child{background:#1a2d3d;color:#bdd0d6;border:1px solid #334b5b}
+        .connection-status{display:inline-flex;align-items:center;gap:9px;font-size:.84rem;color:#b8c9ce}.connection-dot{width:8px;height:8px;border-radius:50%;background:#718392}.connection-dot.connected{background:var(--lime);box-shadow:0 0 13px #c5ed9b99;animation:pulse 2s infinite}@keyframes pulse{50%{opacity:.55}}
+        .last-update{font-size:.75rem;color:var(--muted);margin-top:10px;text-align:left}
+        .status-bar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;background:none;border:0;margin:0}.status-item{min-height:142px;background:linear-gradient(145deg,#152b3b,#102231);border:1px solid #254052;border-radius:15px;padding:19px;display:flex;flex-direction:column;justify-content:space-between}.status-label,.metric-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:#91aab4;margin-bottom:10px;font-weight:650}.status-value{font-size:2.35rem;font-weight:720;letter-spacing:-.055em;color:var(--cyan);line-height:1.08;font-variant-numeric:tabular-nums}.status-unit{font-size:.8rem;color:var(--muted);margin-top:8px}.status-value.alert{color:var(--red)}.status-value.safe{color:var(--lime)}
+        .alert-box{background:#391f27;border:1px solid #a7464b;border-radius:14px;padding:15px 18px;margin-bottom:18px;display:none}.alert-box.active{display:block}.alert-title{font-weight:750;color:var(--red);margin-bottom:3px;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}.alert-details{font-size:.9rem;color:#ffd0c9}
+        .metrics-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;background:none;border:0}.metric-card{background:#0e1c29;border:1px solid #223848;border-radius:13px;padding:17px}.metric-value{font-size:1.18rem;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}.metric-change{font-size:.8rem;margin-top:6px;color:var(--lime)}.metric-change.negative{color:var(--amber)}
+        .quality-section{border-color:#2f5960;background:linear-gradient(135deg,rgba(18,43,55,.98),rgba(13,27,40,.98))}.quality-result{display:flex;align-items:center;gap:30px;padding:20px 22px;border:1px solid #2b4b58;border-radius:14px;background:#0a1824}.quality-result.good{border-color:#577a51;background:linear-gradient(100deg,#172c27,#0c1c25)}.quality-result.attention{border-color:#9b554c;background:linear-gradient(100deg,#332128,#0c1c25)}.quality-result.incomplete{border-color:#9a7941;background:linear-gradient(100deg,#302a1c,#0c1c25)}.quality-kicker{font-size:.69rem;letter-spacing:.1em;text-transform:uppercase;color:#9bb1b6;font-weight:700}.quality-score{font-size:2.5rem;line-height:1.1;font-weight:780;letter-spacing:-.06em;color:var(--cyan);margin-top:6px;font-variant-numeric:tabular-nums}.quality-result.good .quality-score{color:var(--lime)}.quality-result.attention .quality-score{color:var(--red)}.quality-result.incomplete .quality-score{color:var(--amber)}.quality-verdict{font-size:1.12rem;font-weight:730;color:var(--text)}.quality-detail{font-size:.84rem;color:var(--muted);margin-top:5px}.quality-components{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.quality-component{background:#0d1b27;border:1px solid #223848;border-radius:11px;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;font-size:.82rem;color:#a8bcc1}.quality-component strong{color:var(--muted)}.quality-component strong.pass{color:var(--lime)}.quality-component strong.fail{color:var(--red)}.quality-component strong.unknown{color:var(--amber)}.quality-method{font-size:.77rem;color:var(--muted);margin-top:13px;line-height:1.6}
+        @media(max-width:600px){.quality-result{align-items:flex-start;flex-direction:column;gap:12px}.quality-components{grid-template-columns:1fr}.quality-component{padding:10px 12px}}
+        .chart-container{position:relative;height:320px;margin-top:6px}.history-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.84rem;min-width:680px}.history-table th{background:#14293a;padding:12px;text-align:left;font-weight:700;color:#a9dcd7;text-transform:uppercase;font-size:.68rem;letter-spacing:.08em;border-bottom:1px solid var(--line)}.history-table td{padding:12px;border-bottom:1px solid #203341;color:#c3d1d4}.history-table tr:hover{background:#142738}.section:has(.history-table){overflow-x:auto}
+        #ph-mode{font-size:.83rem;color:var(--muted);margin-top:14px!important;padding:10px 13px;background:#0d1a26;border-radius:10px;display:inline-block}#ph-mode:before{content:"◈  ";color:var(--cyan)}
+        .section p{max-width:900px}.section p strong{color:var(--cyan)!important}
+        @media(max-width:760px){.header{padding:25px 18px 16px}.container{padding:7px 16px 36px}.status-bar,.metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.status-item{min-height:125px}.status-value{font-size:2rem}.section{padding:18px;border-radius:15px}.chart-container{height:270px}}
+        @media(max-width:430px){.header{align-items:flex-start;flex-direction:column;gap:5px}.status-bar{gap:8px}.status-item{padding:14px;min-height:115px}.status-value{font-size:1.75rem}.connection-form input{min-width:100%}.connection-form .btn{flex:1}.metrics-grid{gap:8px}.metric-card{padding:13px}}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AQUASENSE</h1>
+        <p>Water sensor monitoring · ESP32</p>
+    </div>
+
+    <div class="container">
+        <!-- Connection Settings -->
+        <div class="section">
+            <div class="section-title">Device connection</div>
+            <div class="connection-form">
+                <input type="text" id="esp-ip" placeholder="ESP32 IP address (e.g., 192.168.1.100)" value="192.168.1.100" aria-label="ESP32 IP address">
+                <button class="btn" onclick="connectToESP()">Connect</button>
+                <button class="btn" onclick="disconnectFromESP()">Disconnect</button>
+            </div>
+            <div class="connection-status">
+                <span class="connection-dot" id="conn-dot"></span>
+                <span id="conn-status">Disconnected</span>
+            </div>
+            <div class="last-update" id="last-update">Last update: Never</div>
+        </div>
+
+        <!-- Alert Box -->
+        <div class="alert-box" id="alert-box">
+            <div class="alert-title">⚠ Sensor Threshold Alert</div>
+            <div class="alert-details" id="alert-details">No alerts</div>
+        </div>
+
+        <!-- Live Sensor Readings -->
+        <div class="section">
+            <div class="section-title">Live readings</div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-label">pH Level</div>
+                    <div class="status-value" id="ph-value">--</div>
+                    <div class="status-unit">pH units</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Temperature</div>
+                    <div class="status-value" id="temp-value">--</div>
+                    <div class="status-unit">°C</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">LDR Raw · Light</div>
+                    <div class="status-value" id="ldr-value">--</div>
+                    <div class="status-unit">Relative light sensor count</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Buzzer Status</div>
+                    <div class="status-value" id="buzzer-status">--</div>
+                    <div class="status-unit">Alert state</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section quality-section">
+            <div class="section-title">Water quality indicator result</div>
+            <div class="quality-result" id="quality-result" aria-live="polite">
+                <div><div class="quality-kicker">Project indicator score</div><div class="quality-score" id="quality-score">-- / 100</div></div>
+                <div class="quality-copy"><div class="quality-verdict" id="quality-verdict">Waiting for sensor readings</div><div class="quality-detail" id="quality-detail">Connect to the ESP32 to calculate the result.</div></div>
+            </div>
+            <div class="quality-components">
+                <div class="quality-component"><span>pH</span><strong id="ph-check">Waiting</strong></div>
+                <div class="quality-component"><span>Temperature</span><strong id="temp-check">Waiting</strong></div>
+                <div class="quality-component"><span>LDR light reading</span><strong id="ldr-check">Waiting</strong></div>
+            </div>
+            <p class="quality-method">Calculation: each valid indicator that meets its configured limit contributes equally (one third) to the score. A missing or invalid reading makes the result incomplete. This score summarizes only these prototype checks; it is not a drinking-water safety rating.</p>
+        </div>
+
+        <!-- Threshold Status -->
+        <div class="section">
+            <div class="section-title">Sensor threshold status · not a safety rating</div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Configured sensor alerts</div>
+                    <div class="metric-value" id="threshold-status">Waiting for data</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">pH Threshold</div>
+                    <div class="metric-value">6.5 - 8.5</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Temperature Threshold</div>
+                    <div class="metric-value">5 - 35 °C</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">LDR Change Alert Limit</div>
+                    <div class="metric-value">±25%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculated Insights -->
+        <div class="section">
+            <div class="section-title">Recent trends</div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Average Temperature</div>
+                    <div class="metric-value" id="avg-temp">--</div>
+                    <div class="status-unit">°C</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Temperature Change</div>
+                    <div class="metric-value" id="temp-change">--</div>
+                    <div class="metric-change" id="temp-change-dir">--</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">pH Deviation</div>
+                    <div class="metric-value" id="ph-deviation">--</div>
+                    <div class="status-unit">from optimal (7.0)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">LDR Raw vs Baseline</div>
+                    <div class="metric-value" id="ldr-baseline">--</div>
+                    <div class="status-unit">% change</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section"><div class="section-title">About these readings</div><p style="color:#CBD5E1">“No configured alerts” only means the readings passed this prototype’s pH, temperature, and LDR checks. It does not mean the water is drinkable or safe for any use. These sensors do not test for germs, metals, pesticides, or many other hazards. LDR output is raw and light-related; it is not a turbidity measurement. Have water tested by an appropriate laboratory and follow local health guidance before drinking it.</p><p id="ph-mode" style="color:#94A3B8;margin-top:0.75rem">pH mode: waiting for ESP32</p></div>
+
+        <!-- Historical Data -->
+        <div class="section">
+            <div class="section-title">Sensor history</div>
+            <div class="chart-container">
+                <canvas id="sensorChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Reading History -->
+        <div class="section">
+            <div class="section-title">Reading log</div>
+            <button class="btn" onclick="exportCSV()">Export Readings as CSV</button>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>pH</th>
+                        <th>Temp (°C)</th>
+                        <th>LDR</th>
+                        <th>Status</th>
+                        <th>Alert Details</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #64748B;">No data recorded yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Project Information -->
+        <div class="section">
+            <div class="section-title">System Information</div>
+            <p style="color: #94A3B8; font-size: 0.875rem; line-height: 1.7;">
+                <strong style="color: #0EA5E9;">Hardware:</strong> ESP32 microcontroller, PH-4502C pH sensor, DS18B20 temperature sensor, LM393 LDR module, Active buzzer<br>
+                <strong style="color: #0EA5E9;">Thresholds:</strong> pH 6.5-8.5 | Temperature 5-35°C | LDR change ±25% from baseline<br>
+                
+                <strong style="color: #0EA5E9;">Update Interval:</strong> Every 20 seconds from ESP32<br>
+                <strong style="color: #0EA5E9;">Limitations:</strong> Two-point pH calibration improves the estimate | Readings are prototype measurements, not a safety certification
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let sensorHistory = [];
+        let chart = null;
+        let espIP = '192.168.1.100';
+        let reconnectInterval = null;
+        let manuallyDisconnected = false;
+        let ldrBaseline = null;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('sensorChart');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'pH',
+                            data: [],
+                            borderColor: '#0EA5E9',
+                            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Temperature (°C)',
+                            data: [],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            yAxisID: 'y1',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'LDR',
+                            data: [],
+                            borderColor: '#F59E0B',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            yAxisID: 'y2',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#F1F5F9'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#94A3B8'
+                            },
+                            grid: {
+                                color: 'rgba(100, 116, 139, 0.1)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'pH',
+                                color: '#0EA5E9'
+                            },
+                            ticks: {
+                                color: '#94A3B8'
+                            },
+                            grid: {
+                                color: 'rgba(100, 116, 139, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Temp (°C)',
+                                color: '#10B981'
+                            },
+                            ticks: {
+                                color: '#94A3B8'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            }
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: false,
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+        }
+
+        // ESP32 runs WebSocketsServer on port 80 and accepts the /ws URL.
+        function connectToESP() {
+            manuallyDisconnected = false;
+            espIP = document.getElementById('esp-ip').value.trim();
+            if (!espIP) { updateConnectionStatus(false, 'Enter ESP32 IP address'); return; }
+            if (reconnectInterval) { clearTimeout(reconnectInterval); reconnectInterval = null; }
+            if (ws) { const old = ws; ws = null; old.onclose = null; old.close(); }
+            try {
+                const address = /^wss?:\/\//i.test(espIP) ? espIP.replace(/\/$/, '') + '/ws' : `ws://${espIP}/ws`;
+                const socket = new WebSocket(address); ws = socket;
+                socket.onopen = () => { if (ws === socket) updateConnectionStatus(true); };
+                socket.onmessage = (event) => {
+                    try { const data = JSON.parse(event.data); updateDashboard(data); }
+                    catch (e) { console.error('Invalid ESP32 message', e); }
+                };
+                socket.onerror = () => updateConnectionStatus(false, 'Connection error');
+                socket.onclose = () => {
+                    if (ws === socket) ws = null;
+                    updateConnectionStatus(false, manuallyDisconnected ? 'Disconnected by user' : 'Disconnected');
+                    if (!manuallyDisconnected) reconnectInterval = setTimeout(connectToESP, 5000);
+                };
+            } catch (e) { console.error('WebSocket connection failed', e); updateConnectionStatus(false, 'Connection failed'); }
+        }
+
+        function disconnectFromESP() {
+            manuallyDisconnected = true;
+            if (reconnectInterval) { clearTimeout(reconnectInterval); reconnectInterval = null; }
+            if (ws) { const old = ws; ws = null; old.onclose = null; old.close(); }
+            updateConnectionStatus(false, 'Disconnected by user');
+        }
+
+        function updateConnectionStatus(connected, label) {
+            document.getElementById('conn-dot').classList.toggle('connected', connected);
+            document.getElementById('conn-status').textContent = label || (connected ? 'Connected to ESP32' : 'Disconnected');
+        }
+
+        function validNumber(v) { return typeof v === 'number' && Number.isFinite(v); }
+        function setReading(id, value, digits) {
+            document.getElementById(id).textContent = validNumber(value) ? value.toFixed(digits) : '--';
+        }
+        function updateDashboard(data) {
+            const now = new Date();
+            const phOK = validNumber(data.ph), tempOK = validNumber(data.temperature), ldrOK = validNumber(data.ldr);
+            setReading('ph-value', data.ph, 2); setReading('temp-value', data.temperature, 1);
+            document.getElementById('ldr-value').textContent = ldrOK ? Math.round(data.ldr) : '--';
+            document.getElementById('buzzer-status').textContent = data.buzzerActive === true ? 'ACTIVE' : data.buzzerActive === false ? 'Inactive' : '--';
+            document.getElementById('ph-mode').textContent = 'pH mode: ' + (data.phCalibrated === true ? 'two-point calibrated' : data.phCalibrated === false ? 'approximate (not calibrated)' : 'unknown');
+            const phEl=document.getElementById('ph-value'); phEl.classList.toggle('alert', phOK && (data.ph < 6.5 || data.ph > 8.5)); phEl.classList.toggle('safe', phOK && data.ph >= 6.5 && data.ph <= 8.5);
+            const tEl=document.getElementById('temp-value'); tEl.classList.toggle('alert', tempOK && (data.temperature < 5 || data.temperature > 35)); tEl.classList.toggle('safe', tempOK && data.temperature >= 5 && data.temperature <= 35);
+            const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+            const alertText = alerts.length ? alerts.join(' | ') : 'No active threshold alerts';
+            const thresholdStatus=document.getElementById('threshold-status'); thresholdStatus.textContent=alerts.length ? 'Alert detected' : 'No configured alerts'; thresholdStatus.style.color=alerts.length ? '#EF4444' : '#10B981';
+            document.getElementById('alert-box').classList.toggle('active', alerts.length > 0);
+            document.getElementById('alert-details').textContent=alertText;
+            ldrBaseline = validNumber(data.ldrBaseline) ? data.ldrBaseline : null;
+            updateQualityResult({ph: data.ph, temperature: data.temperature, ldr: data.ldr, ldrBaseline: ldrBaseline, phCalibrated: data.phCalibrated === true});
+            sensorHistory.push({timestamp:now, ph:phOK?data.ph:null, temperature:tempOK?data.temperature:null, ldr:ldrOK?data.ldr:null, alerts:alertText});
+            if (sensorHistory.length > 100) sensorHistory.shift();
+            updateCalculatedInsights(); updateChart(); updateHistoryTable();
+            document.getElementById('last-update').textContent=`Last update: ${now.toLocaleTimeString()}`;
+        }
+
+        function updateQualityResult(data) {
+            const checks = [
+                {id:'ph-check', valid:validNumber(data.ph) && data.ph >= 0 && data.ph <= 14, pass:validNumber(data.ph) && data.ph >= 6.5 && data.ph <= 8.5},
+                {id:'temp-check', valid:validNumber(data.temperature), pass:validNumber(data.temperature) && data.temperature >= 5 && data.temperature <= 35},
+                {id:'ldr-check', valid:validNumber(data.ldr), pass:validNumber(data.ldr) && (validNumber(data.ldrBaseline) && data.ldrBaseline > 0 ? Math.abs((data.ldr-data.ldrBaseline)/data.ldrBaseline*100) <= 25 : data.ldr >= 300 && data.ldr <= 3800)}
+            ];
+            const result=document.getElementById('quality-result');
+            checks.forEach(c=>{const el=document.getElementById(c.id);el.textContent=!c.valid?'Unavailable':c.pass?'Within limit':'Outside limit';el.className=c.valid?(c.pass?'pass':'fail'):'unknown';});
+            const validChecks=checks.filter(c=>c.valid), passed=validChecks.filter(c=>c.pass).length;
+            const complete=validChecks.length===checks.length;
+            const calibrated=data.phCalibrated;
+            document.getElementById('quality-score').textContent=complete?`${Math.round(passed/checks.length*100)} / 100`:`-- / 100`;
+            const verdict=document.getElementById('quality-verdict'),detail=document.getElementById('quality-detail');
+            result.classList.remove('good','attention','incomplete');
+            if(!complete){result.classList.add('incomplete');verdict.textContent='Incomplete sensor result';detail.textContent=`${passed} of ${checks.length} indicator checks passed; one or more readings are unavailable or invalid.`;}
+            else if(passed===checks.length && calibrated){result.classList.add('good');verdict.textContent='All monitored indicators within limits';detail.textContent='All three readings meet the limits configured in this project.';}
+            else if(passed===checks.length && !calibrated){result.classList.add('incomplete');verdict.textContent='Provisional: pH is not calibrated';detail.textContent='All three readings meet configured limits, but pH is approximate. Calibrate with both buffer solutions for a more useful result.';}
+            else{result.classList.add('attention');verdict.textContent='One or more indicators need attention';detail.textContent=`${passed} of ${checks.length} indicator checks passed. Review readings and alert details${calibrated?' below':'; pH is approximate until calibrated'}.`; }
+        }
+
+        function updateCalculatedInsights() {
+            if (sensorHistory.length === 0) return;
+
+            // Average temperature
+            const temps = sensorHistory.map(r => r.temperature).filter(validNumber);
+            const avgTemp = temps.length ? temps.reduce((sum, v) => sum + v, 0) / temps.length : null;
+            document.getElementById('avg-temp').textContent = validNumber(avgTemp) ? avgTemp.toFixed(1) : '--';
+
+            // Temperature change
+            if (sensorHistory.length > 1) {
+                const validTemps = sensorHistory.filter(r => validNumber(r.temperature));
+                if (validTemps.length < 2) { document.getElementById('temp-change').textContent='--'; document.getElementById('temp-change-dir').textContent='Insufficient valid readings'; } else {
+                const tempChange = validTemps[validTemps.length - 1].temperature - validTemps[0].temperature;
+                document.getElementById('temp-change').textContent = Math.abs(tempChange).toFixed(1) + ' °C';
+                const changeDir = document.getElementById('temp-change-dir');
+                changeDir.textContent = tempChange >= 0 ? `+${tempChange.toFixed(1)} °C` : `${tempChange.toFixed(1)} °C`;
+                changeDir.classList.toggle('negative', tempChange < 0);
+                }
+            }
+
+            // pH deviation from optimal (7.0)
+            const currentPh = sensorHistory[sensorHistory.length - 1].ph;
+            document.getElementById('ph-deviation').textContent = validNumber(currentPh) ? Math.abs(currentPh - 7).toFixed(2) : '--';
+
+            // LDR vs baseline
+            if (ldrBaseline && ldrBaseline > 0 && validNumber(sensorHistory[sensorHistory.length - 1].ldr)) {
+                const currentLdr = sensorHistory[sensorHistory.length - 1].ldr;
+                const ldrChange = ((currentLdr - ldrBaseline) / ldrBaseline * 100);
+                document.getElementById('ldr-baseline').textContent = (ldrChange >= 0 ? '+' : '') + ldrChange.toFixed(1);
+            } else {
+                document.getElementById('ldr-baseline').textContent = 'No baseline';
+            }
+        }
+
+        function updateChart() {
+            const maxPoints = 20;
+            const recentData = sensorHistory.slice(-maxPoints);
+
+            chart.data.labels = recentData.map(r => r.timestamp.toLocaleTimeString());
+            chart.data.datasets[0].data = recentData.map(r => r.ph);
+            chart.data.datasets[1].data = recentData.map(r => r.temperature);
+            chart.data.datasets[2].data = recentData.map(r => r.ldr);
+            chart.update('none');
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('history-body');
+            const recentReadings = sensorHistory.slice(-10).reverse();
+
+            tbody.innerHTML = recentReadings.map(r => `
+                <tr>
+                    <td>${r.timestamp.toLocaleString()}</td>
+                    <td>${validNumber(r.ph) ? r.ph.toFixed(2) : '--'}</td>
+                    <td>${validNumber(r.temperature) ? r.temperature.toFixed(1) : '--'}</td>
+                    <td>${validNumber(r.ldr) ? Math.round(r.ldr) : '--'}</td>
+                    <td style="color: ${r.alerts === 'Normal' ? '#10B981' : '#EF4444'}">${r.alerts === 'Normal' ? 'Normal' : 'Alert'}</td>
+                    <td>${r.alerts}</td>
+                </tr>
+            `).join('');
+        }
+
+        function exportCSV() {
+            if (sensorHistory.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            let csv = 'Timestamp,pH,Temperature (°C),LDR raw,Status,Alert Details\n';
+            sensorHistory.forEach(r => {
+                csv += `${r.timestamp.toLocaleString()},${r.ph},${r.temperature},${r.ldr},${r.alerts === 'Normal' ? 'Normal' : 'Alert'},"${r.alerts}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aquasense-readings-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // No mock readings: dashboard updates only from ESP32 WebSocket messages.
+        window.addEventListener('load', () => { initChart(); });
+    </script>
+</body>
+</html>
